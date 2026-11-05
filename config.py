@@ -57,6 +57,10 @@ DETECTOR_MAX_TOKENS = 400
 WEIGHT_MODEL_SIGNAL = 0.5
 WEIGHT_STYLE_SIGNAL = 0.5
 
+# If the two signals are further apart than this, the combined score can't
+# reach AI_THRESHOLD (see scoring.combine_signals). One signal alone never accuses.
+DISAGREEMENT_GAP = 0.30
+
 
 # ─── Thresholds (Milestone 5) ────────────────────────────────────────────────
 # Where one label becomes another. Scores run 0.0 (confidently human) to 1.0
@@ -72,7 +76,10 @@ WEIGHT_STYLE_SIGNAL = 0.5
 # that decide who pays for it.
 
 HUMAN_THRESHOLD = 0.35
-AI_THRESHOLD = 0.65
+# Set 2026-11-04 from calibration: plain human writing scored 0.847 combined
+# and generic AI 0.907. 0.88 keeps plain human writing out of "ai", at the cost
+# of AI text that is only slightly less generic landing in "unsure".
+AI_THRESHOLD = 0.88
 
 # ⚠️ One thing that catches people out in Milestone 5. A weighted average can
 # only land between its two inputs — so while `style_signal` is still the stub
@@ -94,8 +101,8 @@ AI_THRESHOLD = 0.65
 
 RATE_LIMITING_ENABLED = os.getenv("AI201_RATE_LIMITS", "0") == "1"
 
-RATE_LIMIT_PER_MINUTE = 10
-RATE_LIMIT_PER_DAY = 200
+RATE_LIMIT_PER_MINUTE = 5
+RATE_LIMIT_PER_DAY = 50
 
 # Flask-Limiter warns loudly without this. In-memory is right for one laptop
 # and wrong for anything real — a restart forgets every count, and two copies

@@ -52,11 +52,22 @@ def combine_signals(model_score: float, style_score: float) -> float:
     The weights in config.py are placeholders. Change them, or ignore them and
     write a different rule.
     """
-    # TODO: replace this
-    return (
+    # THE RULE (written before coding; numbers in README and config.py):
+    #   1. Equal-weight average. Neither signal earned more trust on the
+    #      calibration set: the model signal is fooled by plain writing, the
+    #      style signal by a few dashes and short sentences.
+    #   2. Disagreement can block an accusation, never cause one. If the two
+    #      signals are more than DISAGREEMENT_GAP apart, the score is capped
+    #      just below AI_THRESHOLD, so one signal alone can never produce the
+    #      "ai" label. The cap is one-sided on purpose: a split can still end
+    #      in "human" or "unsure", because those cost the writer nothing.
+    combined = (
         config.WEIGHT_MODEL_SIGNAL * model_score
         + config.WEIGHT_STYLE_SIGNAL * style_score
     )
+    if abs(model_score - style_score) > config.DISAGREEMENT_GAP:
+        combined = min(combined, config.AI_THRESHOLD - 0.01)
+    return round(min(max(combined, 0.0), 1.0), 4)
 
 
 def score_to_label(score: float) -> tuple[str, str]:
@@ -85,12 +96,11 @@ def score_to_label(score: float) -> tuple[str, str]:
     think if they got it on their own work. That question is the whole
     milestone.
     """
-    # TODO: replace this — thresholds are in config.py
     if score >= config.AI_THRESHOLD:
-        return "ai", "PLACEHOLDER — write the high-confidence AI label."
+        return "ai", LABEL_AI
     if score <= config.HUMAN_THRESHOLD:
-        return "human", "PLACEHOLDER — write the high-confidence human label."
-    return "unsure", "PLACEHOLDER — write the unsure label."
+        return "human", LABEL_HUMAN
+    return "unsure", LABEL_UNSURE
 
 
 def label_ranges() -> list[tuple[str, str]]:
@@ -103,3 +113,31 @@ def label_ranges() -> list[tuple[str, str]]:
         ("unsure", f"{config.HUMAN_THRESHOLD:.2f} – {config.AI_THRESHOLD:.2f}"),
         ("high-confidence AI", f"{config.AI_THRESHOLD:.2f} – 1.00"),
     ]
+
+
+# ── The three labels, as a writer sees them ───────────────────────────────────
+
+APPEAL_HINT = (
+    " If this doesn't match how you wrote it, you can ask a person to review "
+    "it: send an appeal with your content ID and a few words about how you "
+    "wrote it."
+)
+
+LABEL_HUMAN = (
+    "This reads like it was written by a person. Our check found the kind of "
+    "variety (in sentence length, word choice and punctuation) that people's "
+    "writing usually has."
+)
+
+LABEL_UNSURE = (
+    "We can't tell from the writing alone whether this was written by a "
+    "person or with help from AI, and that's common: plain, clear writing "
+    "often looks this way. This is not a finding that you used AI, and no "
+    "action is taken because of it." + APPEAL_HINT
+)
+
+LABEL_AI = (
+    "This writing has strong patterns we usually see in AI-generated text. "
+    "This is an estimate, not proof, and it says nothing about you; people's "
+    "own writing sometimes looks this way too." + APPEAL_HINT
+)
