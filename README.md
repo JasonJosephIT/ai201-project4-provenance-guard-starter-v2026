@@ -237,7 +237,9 @@ I used Claude Code (Claude Opus 5.5) as a pair programmer throughout. The two mo
 
 **Moment 1 — test material**
 
-I use Claude to produce test material as I created or first initiated the project and as I implemented more testing.
+- *What I asked for:* I use Claude to produce test material as I created or first initiated the project and as I implemented more testing.
+- *What came back:* The test texts: a generic AI essay, a detailed personal story, a plain human-style paragraph, a formal legal-style passage, and a lightly edited AI version.
+- *What I changed:* How I produced the output. For two later entries, I had Claude write them using a skill meant to make its writing sound human, to see if that made any difference. It did: both scored "unsure" (0.595 and 0.423) instead of "ai". They had no stock AI words, and their colons read as human punctuation.
 
 **Moment 2 — the combining rule and the AI threshold**
 
