@@ -275,10 +275,31 @@ Per `creator_id`, falling back to IP address when a request has none (`app.py::r
 
 ```
 $ python run_attacks.py --flood 15
+15 submissions as 'flood_tester' against http://127.0.0.1:5000
+(the first one is slow while the model loads)
+
+  [ 1/15] 200
+  [ 2/15] 200
+  [ 3/15] 200
+  [ 4/15] 200
+  [ 5/15] 200
+  [ 6/15] 429
+  [ 7/15] 429
+  [ 8/15] 429
+  [ 9/15] 429
+  [10/15] 429
+  [11/15] 429
+  [12/15] 429
+  [13/15] 429
+  [14/15] 429
+  [15/15] 429
+
+============================================================
 200 200 200 200 200 429 429 429 429 429 429 429 429 429 429
+============================================================
 
 10 of 15 were rate limited.
-Wrote results/flood_2026-11-04_2131.md
+Wrote results/flood_2026-11-04_2133.md
 ```
 
 ---
