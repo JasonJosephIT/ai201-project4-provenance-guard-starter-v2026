@@ -44,7 +44,7 @@
 1. **Route (`app.py::submit`).** Parses the JSON and rejects bad input before any model runs. Missing, empty or non-string `text`, or a missing `creator_id`, gets a 400. More than 20,000 characters gets a 413. Under 40 characters, or text that isn't English prose, gets a 422. Every rejection is logged.
 2. **Rate limiter (unit 8).** Counts requests per `creator_id`, falling back to IP. Past the limit: 429 plus a `rejected` log entry.
 3. **Signal one (`detector.model_signal`).** GPT-2 reads the first 400 tokens. Low perplexity gives a high `model_score`.
-4. **Signal two (`stylometry.style_signal`).** Sentence-length spread and expressive punctuation give `style_score`.
+4. **Signal two (`stylometry.style_signal`).** Sentence-length spread, expressive punctuation and a small weight for stock AI words give `style_score`.
 5. **Combining rule (`scoring.combine_signals`).** An equal-weight average, except that disagreement between the signals can block an "AI" label.
 6. **Label (`scoring.score_to_label`).** Produces the `guess`, a plain-language sentence, and `confidence = |combined − 0.5| × 2`.
 7. **Log and respond (`audit.log_decision`).** Writes all nine fields plus `confidence` and `truncated`, and returns them with a `content_id` the writer can use to appeal.
@@ -72,14 +72,15 @@
 ### Signal two — the style signal
 
 **What it measures:** The shape of the text, without reading it:
-- *Sentence-length spread* (standard deviation ÷ mean of words per sentence; 0.20 or below scores fully AI-like, 0.80 or above fully human-like), weighted 0.6.
-- *Expressive punctuation* (`; : — – ( ) ! ?` and quotation marks per 100 words; 0 scores fully AI-like, 4 or more fully human-like), weighted 0.4.
+- *Sentence-length spread* (standard deviation ÷ mean of words per sentence; 0.20 or below scores fully AI-like, 0.80 or above fully human-like), weighted 0.5.
+- *Expressive punctuation* (`; : — – ( ) ! ?` and quotation marks per 100 words; 0 scores fully AI-like, 4 or more fully human-like), weighted 0.3.
+- *Stock AI words* (1,075 words and phrases in [`ai_words.txt`](ai_words.txt), like "delve", "furthermore", "crucial", "in conclusion", "it is important to note", with every verb form listed; 0 per 100 words scores 0, 3 or more scores fully AI-like), weighted 0.2. It has the smallest weight on purpose: formal human writers use "furthermore" and "crucial" too, so the list can nudge the score but never decide it.
 
-Type-token ratio is computed but weighted 0. On my calibration set it ran backwards: the AI essay scored 0.90 and the human one 0.86. It would also have pushed plain human writing toward "AI".
+**Not measured: vocabulary variety.** I removed word choice (type-token ratio) on purpose. AI can settle into a set vocabulary, but so can people: second-language writers, plain writers, anyone with a house style. A measure that can't tell those apart would accuse exactly the writers this service most needs to protect. It also ran backwards on my calibration set: the AI essay scored 0.90 and the human one 0.86.
 
 **Why that might differ between human and AI writing:** AI text is even, with mid-length sentence after mid-length sentence, commas and full stops. Human writing is lumpy: "Hours." next to a 40-word sentence, plus dashes and brackets.
 
-**What it can't see:** Meaning. Anything that changes the shape without changing the content moves it: a few dashes, chopped sentences, a pasted quote. My lightly edited AI text scored only **0.306** after I added dashes and short sentences. It also shares signal one's blind spot: plain human writing has even sentences and no expressive punctuation, so it scored **0.823**.
+**What it can't see:** Meaning. Anything that changes the shape without changing the content moves it: a few dashes, chopped sentences, a pasted quote. My lightly edited AI text scored only **0.306** after I added dashes and short sentences. It also shares signal one's blind spot: plain human writing has even sentences and no expressive punctuation, so it scored **0.652** even with zero stock AI words.
 
 ### The combining rule
 
@@ -94,20 +95,23 @@ Calibration (model / style / combined → label):
 
 | Input | model | style | combined | label |
 |---|---|---|---|---|
-| Clearly AI (generic essay) | 0.853 | 0.961 | 0.907 | ai |
+| Clearly AI (generic essay; 5.07 stock AI words per 100) | 0.853 | 0.968 | 0.910 | ai |
 | Clearly human (grandmother's buttons) | 0.260 | 0.000 | 0.130 | human |
-| Plain human (running) | 0.871 | 0.823 | 0.847 | unsure |
-| Formal human (legal opinion style) | 0.714 | 0.807 | 0.760 | unsure |
-| Lightly edited AI | 0.556 | 0.306 | 0.431 | unsure |
+| Plain human (running) | 0.871 | 0.652 | 0.761 | unsure |
+| Formal human (legal opinion style; 1.77 stock AI words per 100) | 0.714 | 0.765 | 0.739 | unsure |
+| Human student essay ("Furthermore", "In conclusion"; 3.80 per 100) | 0.737 | 0.964 | 0.850 | unsure |
+| Lightly edited AI | 0.556 | 0.246 | 0.401 | unsure |
 
-I set `AI_THRESHOLD` at 0.88, not 0.65, because of the plain human row. At 0.65, three of my five texts would be labelled AI, and two of those three are human. The cost: AI text only slightly less generic than my sample lands in "unsure". The margin is thin (0.847 against 0.88), and it rests on one sample of each, so criterion 1 tests it against real writing.
+I set `AI_THRESHOLD` at 0.88, not 0.65, because of the plain human row. Before the stock-AI-words measure it scored 0.847, and at 0.65 three of my five texts would have been labelled AI, two of them human. Adding the word list moved plain human writing down to 0.761 (it has none of those words) while the generic AI essay stayed at 0.910 (it is full of them), so the gap between them grew from 0.06 to 0.15. The cost: AI text only slightly less generic than my sample lands in "unsure". This rests on one sample of each, so criterion 1 tests it against real writing.
+
+**Known risk from the word list:** students are *taught* "Furthermore" and "In conclusion". A human student essay full of them scored 0.850, only 0.03 under the AI line. The word list is the reason (it saturated its 0.2 share), so if criterion 1 fails on school-style writing, this is the first thing to turn down.
 
 **Where it lives:** `scoring.py::combine_signals`
 
 <!-- ⚠️ The grader checks your code against that line. If your rule lives
      somewhere else, say where. -->
 
-**A case where my two signals split, and what my rule does with it:** The lightly edited AI text scored model 0.556 (leaning AI) but style 0.306 (leaning human), because the added dashes and short sentences fooled the style signal. The gap is 0.25, under the 0.30 cap, so the plain average applies: 0.431, which is "unsure". The rule gets it right for the wrong reason: the style signal was tricked, and the model signal wasn't sure enough to outvote it. If the gap had been over 0.30 and the average over 0.88, the cap would have held it at "unsure" anyway.
+**A case where my two signals split, and what my rule does with it:** The lightly edited AI text scored model 0.556 (leaning AI) but style 0.246 (leaning human): the added dashes and short sentences fooled the style signal, and the rewrite also removed every stock AI word. The gap is 0.31, over the 0.30 limit, so the cap applies, but the average (0.401) is already well below the AI line, so the result is "unsure" either way. The rule gets it right for the wrong reason: the style signal was tricked, and the model signal wasn't sure enough to outvote it.
 
 
 
@@ -122,11 +126,11 @@ I set `AI_THRESHOLD` at 0.88, not 0.65, because of the plain human row. At 0.65,
 
 | Label | Score range | The exact text a reader sees |
 |---|---|---|
-| high-confidence human | 0.00 – 0.35 | This reads like it was written by a person. Our check found the kind of variety (in sentence length, word choice and punctuation) that people's writing usually has. |
+| high-confidence human | 0.00 – 0.35 | This reads like it was written by a person. Our check found the kind of variety (in sentence length and punctuation) that people's writing usually has. |
 | unsure | 0.35 – 0.88 | We can't tell from the writing alone whether this was written by a person or with help from AI, and that's common: plain, clear writing often looks this way. This is not a finding that you used AI, and no action is taken because of it. If this doesn't match how you wrote it, you can ask a person to review it: send an appeal with your content ID and a few words about how you wrote it. |
 | high-confidence AI | 0.88 – 1.00 | This writing has strong patterns we usually see in AI-generated text. This is an estimate, not proof, and it says nothing about you; people's own writing sometimes looks this way too. If this doesn't match how you wrote it, you can ask a person to review it: send an appeal with your content ID and a few words about how you wrote it. |
 
-All three were reached through `/submit`: the grandmother text scored 0.130 (human), the running text 0.847 (unsure), and the generic AI essay 0.907 (AI).
+All three were reached through `/submit`: the grandmother text scored 0.130 (human), the running text 0.761 (unsure), and the generic AI essay 0.910 (AI).
 
 **Why I worded the "unsure" one this way:** Most real writers who land here are like my running paragraph: plain, clear writing that both signals misread. So the label says outright that this is common and that plain writing looks this way, which puts the reason on the tool, not on the writer. It says "this is not a finding that you used AI" and "no action is taken", because a reader who hears "we're not sure" about their own work assumes the worst. And it ends with how to ask a person, since an unsure result someone can't act on just leaves them worried.
 <!-- It's the hardest of the three. It has to admit uncertainty without
@@ -157,15 +161,15 @@ $ curl -X POST http://127.0.0.1:5000/submit \
 
 ```json
 {
-  "combined_score": 0.8004,
-  "confidence": 0.6008,
-  "content_id": "653aef72-6cda-40cb-8a00-42d4bfb15167",
+  "combined_score": 0.7166,
+  "confidence": 0.4332,
+  "content_id": "cac71d93-f80f-4712-9a48-48dedee7a31a",
   "creator_id": "jason",
   "guess": "unsure",
   "label": "We can't tell from the writing alone whether this was written by a person or with help from AI, and that's common: plain, clear writing often looks this way. This is not a finding that you used AI, and no action is taken because of it. If this doesn't match how you wrote it, you can ask a person to review it: send an appeal with your content ID and a few words about how you wrote it.",
   "model_score": 0.7949,
   "status": "decided",
-  "style_score": 0.8058,
+  "style_score": 0.6382,
   "truncated": false
 }
 ```
@@ -175,13 +179,13 @@ $ curl -X POST http://127.0.0.1:5000/submit \
 ```bash
 $ curl -X POST http://127.0.0.1:5000/appeal \
   -H "Content-Type: application/json" \
-  -d '{"content_id": "653aef72-6cda-40cb-8a00-42d4bfb15167", "reasoning": "I wrote this myself about my own running. I keep my writing simple on purpose."}'
+  -d '{"content_id": "cac71d93-f80f-4712-9a48-48dedee7a31a", "reasoning": "I wrote this myself about my own running. I keep my writing simple on purpose."}'
 ```
 
 ```json
 {
-  "appealed_at": "2026-11-05T01:42:35+00:00",
-  "content_id": "653aef72-6cda-40cb-8a00-42d4bfb15167",
+  "appealed_at": "2026-11-05T02:11:53+00:00",
+  "content_id": "cac71d93-f80f-4712-9a48-48dedee7a31a",
   "message": "Your appeal is recorded. A person will review it. Your original result is marked as under review.",
   "original_guess": "unsure",
   "previous_status": "decided",
@@ -200,26 +204,26 @@ $ curl "http://127.0.0.1:5000/log?limit=2"
   "count": 2,
   "entries": [
     {
-      "combined_score": 0.8004,
-      "confidence": 0.6008,
-      "content_id": "653aef72-6cda-40cb-8a00-42d4bfb15167",
+      "combined_score": 0.7166,
+      "confidence": 0.4332,
+      "content_id": "cac71d93-f80f-4712-9a48-48dedee7a31a",
       "creator_id": "jason",
       "guess": "unsure",
       "label": "We can't tell from the writing alone whether this was written by a person or with help from AI, and that's common: plain, clear writing often looks this way. This is not a finding that you used AI, and no action is taken because of it. If this doesn't match how you wrote it, you can ask a person to review it: send an appeal with your content ID and a few words about how you wrote it.",
       "model_score": 0.7949,
       "status": "decided",
-      "style_score": 0.8058,
+      "style_score": 0.6382,
       "text_length": 336,
-      "timestamp": "2026-11-05T01:42:35+00:00",
+      "timestamp": "2026-11-05T02:11:53+00:00",
       "truncated": false
     },
     {
-      "content_id": "653aef72-6cda-40cb-8a00-42d4bfb15167",
+      "content_id": "cac71d93-f80f-4712-9a48-48dedee7a31a",
       "creator_id": "jason",
       "event": "appeal",
       "reasoning": "I wrote this myself about my own running. I keep my writing simple on purpose.",
       "status": "under_review",
-      "timestamp": "2026-11-05T01:42:35+00:00"
+      "timestamp": "2026-11-05T02:11:53+00:00"
     }
   ]
 }
@@ -241,7 +245,7 @@ I used Claude Code (Claude Opus 5.5) as a pair programmer throughout. The two mo
 
 - *What came back first:* The Milestone 1 design proposed `AI_THRESHOLD = 0.75`, plus a rule that both signals must be at least 0.6 before anything is labelled AI.
 - *What the numbers showed:* When the five calibration texts ran through both signals, my plain human running paragraph scored 0.847 combined. That's above 0.75, so the proposed design would have accused it, even though both signals were wrong together. Vocabulary variety (type-token ratio) also ran backwards: the AI essay scored 0.90 and the human one 0.86.
-- *What I changed:* The threshold went to 0.88, and the "both ≥ 0.6" rule was replaced with a one-way disagreement cap (a gap over 0.30 can block an AI label but never cause one). Type-token ratio is weighted 0. The formal-human and edited-AI calibration texts were written by the AI, not by me, so criterion 1 is tested on my own writing in `scenarios.py`, not on these.
+- *What I changed:* The threshold went to 0.88, and the "both ≥ 0.6" rule was replaced with a one-way disagreement cap (a gap over 0.30 can block an AI label but never cause one). Vocabulary variety is removed from the style signal entirely: people can have a set word choice just as AI can, so it isn't a fair differentiator. The formal-human and edited-AI calibration texts were written by the AI, not by me, so criterion 1 is tested on my own writing in `scenarios.py`, not on these.
 
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
