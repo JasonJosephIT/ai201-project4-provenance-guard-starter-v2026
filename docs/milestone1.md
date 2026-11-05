@@ -19,7 +19,7 @@ thresholds 0.35 / 0.65. Where this doc proposes changing one, it says so.
 | 1 | **Flask route `POST /submit`** (`app.py`) | Parses the JSON body. Rejects bad input before any model runs: missing, empty, non-string, too short or too long `text`, or a missing `creator_id`. Each rejection gets a clear error code, never a 500. |
 | 2 | **Rate limiter** (Flask-Limiter, unit 8) | Counts requests per `creator_id`, falling back to IP address. Past the limit it returns 429 and writes a `rejected` entry to the log. |
 | 3 | **Signal one: `detector.model_signal`** | Runs GPT-2 locally on the first 400 tokens and turns perplexity into a 0–1 `model_score` (higher = more AI-like). |
-| 4 | **Signal two: `stylometry.style_signal`** | Measures the text's shape: sentence-length spread, vocabulary variety and punctuation use, combined into a 0–1 `style_score` (higher = more AI-like). |
+| 4 | **Signal two: `stylometry.style_signal`** | Measures the text's shape: sentence-length spread, punctuation use and stock AI words, combined into a 0–1 `style_score` (higher = more AI-like). |
 | 5 | **Combining rule: `scoring.combine_signals`** | Merges the two scores into one `combined_score`. This is where the false-positive decision is made. |
 | 6 | **Label mapping: `scoring.score_to_label`** | Turns the score into a `guess` (`ai` / `unsure` / `human`), a `confidence`, and a plain-language sentence a writer can understand. |
 | 7 | **Audit log: `audit.log_decision`** then the JSON response | Gives the decision a `content_id`, writes all nine fields to `logs/audit.jsonl`, and returns the label, both signal scores and the `content_id` the writer needs if they want to appeal. |
@@ -61,10 +61,11 @@ would guess.
 **What it measures.** The shape of the text, without reading a word of it:
 - *Sentence-length spread*: standard deviation of sentence length divided by
   the mean. Low spread is more AI-like.
-- *Type-token ratio*: unique words divided by total words. Low variety is more
-  AI-like.
 - *Punctuation density*: semicolons, dashes, parentheses, colons, question and
   exclamation marks per 100 words. Uniform, sparse punctuation is more AI-like.
+
+Vocabulary variety is deliberately not measured: people can have a set word
+choice just as AI can, so it isn't a fair differentiator.
 
 Each measure is scaled to 0–1 and flipped so that higher means more AI-like
 before they are averaged.
@@ -78,9 +79,6 @@ use idiosyncratic punctuation.
 - **Meaning.** Anything that changes the shape without changing the content
   moves the score: added typos, sentences chopped or merged, a pasted
   quotation, a bulleted list.
-- **Length effects on TTR.** Type-token ratio falls as text gets longer,
-  because common words repeat. A long human essay can look less varied than a
-  short AI paragraph.
 - **Text the splitter misreads.** The sentence splitter only knows `.`, `!` and
   `?`. Unpunctuated text, poetry and lists become one giant "sentence"; and
   abbreviations like "e.g." create fake short ones.
@@ -105,7 +103,7 @@ personal essay she wrote herself. She uses words she's sure of, sentences of
 |---|---|
 | Route | Valid input, accepted. |
 | Signal one | Common words in a common order give perplexity ≈ 25, so **`model_score` ≈ 0.72**. |
-| Signal two | Even sentence lengths, repeated vocabulary and no unusual punctuation give **`style_score` ≈ 0.65**. |
+| Signal two | Even sentence lengths and no unusual punctuation give **`style_score` ≈ 0.65**. |
 | Combine (0.5 / 0.5) | **`combined_score` ≈ 0.685**. |
 | Label (AI ≥ 0.65) | **`guess: "ai"`**. Both signals agreed, and they agreed because they share one blind spot. |
 | Log | `status: "decided"`, with both scores stored. |

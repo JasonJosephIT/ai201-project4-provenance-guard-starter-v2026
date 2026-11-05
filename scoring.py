@@ -125,7 +125,7 @@ APPEAL_HINT = (
 
 LABEL_HUMAN = (
     "This reads like it was written by a person. Our check found the kind of "
-    "variety (in sentence length, word choice and punctuation) that people's "
+    "variety (in sentence length and punctuation) that people's "
     "writing usually has."
 )
 

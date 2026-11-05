@@ -1,0 +1,1094 @@
+# Stock AI words and phrases — one per line, lowercase.
+# Used by stylometry.ai_word_rate(). Hyphens and punctuation are ignored when
+# matching ("ever-evolving" is listed as "ever evolving"). Lines starting with
+# # are comments. Edit freely; the list is loaded when the service starts.
+#
+# These are words AI models use far more often than most people, drawn from
+# published word-frequency studies of AI text (e.g. "delve", "intricate",
+# "meticulous", "pivotal") and common chatbot phrasing. Many are also normal
+# human words, which is why this measure has the smallest weight.
+
+# ── verbs (all forms) (520)
+accelerate
+accelerated
+accelerates
+accelerating
+actualize
+actualized
+actualizes
+actualizing
+align
+aligned
+aligning
+aligns
+amplified
+amplifies
+amplify
+amplifying
+articulate
+articulated
+articulates
+articulating
+ascertain
+ascertained
+ascertaining
+ascertains
+augment
+augmented
+augmenting
+augments
+beckon
+beckoned
+beckoning
+beckons
+bolster
+bolstered
+bolstering
+bolsters
+bridge
+bridged
+bridges
+bridging
+capitalize
+capitalized
+capitalizes
+capitalizing
+captivate
+captivated
+captivates
+captivating
+catalyze
+catalyzed
+catalyzes
+catalyzing
+cater
+catered
+catering
+caters
+cement
+cemented
+cementing
+cements
+champion
+championed
+championing
+champions
+commend
+commended
+commending
+commends
+compel
+compelled
+compelling
+compels
+contextualize
+contextualized
+contextualizes
+contextualizing
+cultivate
+cultivated
+cultivates
+cultivating
+curate
+curated
+curates
+curating
+customize
+customized
+customizes
+customizing
+delineate
+delineated
+delineates
+delineating
+delve
+delved
+delves
+delving
+democratize
+democratized
+democratizes
+democratizing
+demystified
+demystifies
+demystify
+demystifying
+discern
+discerned
+discerning
+discerns
+distill
+distilled
+distilling
+distills
+elevate
+elevated
+elevates
+elevating
+elucidate
+elucidated
+elucidates
+elucidating
+embark
+embarked
+embarking
+embarks
+embodied
+embodies
+embody
+embodying
+embolden
+emboldened
+emboldening
+emboldens
+embrace
+embraced
+embraces
+embracing
+emphasize
+emphasized
+emphasizes
+emphasizing
+empower
+empowered
+empowering
+empowers
+enable
+enabled
+enables
+enabling
+encapsulate
+encapsulated
+encapsulates
+encapsulating
+encompass
+encompassed
+encompasses
+encompassing
+endeavor
+endeavored
+endeavoring
+endeavors
+enhance
+enhanced
+enhances
+enhancing
+enrich
+enriched
+enriches
+enriching
+enthrall
+enthralled
+enthralling
+enthralls
+enumerate
+enumerated
+enumerates
+enumerating
+envision
+envisioned
+envisioning
+envisions
+epitomize
+epitomized
+epitomizes
+epitomizing
+evoke
+evoked
+evokes
+evoking
+evolve
+evolved
+evolves
+evolving
+exemplified
+exemplifies
+exemplify
+exemplifying
+facilitate
+facilitated
+facilitates
+facilitating
+flourish
+flourished
+flourishes
+flourishing
+foreground
+foregrounded
+foregrounding
+foregrounds
+forge
+forged
+forges
+forging
+fortified
+fortifies
+fortify
+fortifying
+foster
+fostered
+fostering
+fosters
+galvanize
+galvanized
+galvanizes
+galvanizing
+garner
+garnered
+garnering
+garners
+glean
+gleaned
+gleaning
+gleans
+grapple
+grappled
+grapples
+grappling
+harness
+harnessed
+harnesses
+harnessing
+herald
+heralded
+heralding
+heralds
+highlight
+highlighted
+highlighting
+highlights
+hone
+honed
+hones
+honing
+ideate
+ideated
+ideates
+ideating
+ignite
+ignited
+ignites
+igniting
+illuminate
+illuminated
+illuminates
+illuminating
+incentivize
+incentivized
+incentivizes
+incentivizing
+interrogate
+interrogated
+interrogates
+interrogating
+intertwine
+intertwined
+intertwines
+intertwining
+invigorate
+invigorated
+invigorates
+invigorating
+iterate
+iterated
+iterates
+iterating
+juxtapose
+juxtaposed
+juxtaposes
+juxtaposing
+laud
+lauded
+lauding
+lauds
+leverage
+leveraged
+leverages
+leveraging
+maximize
+maximized
+maximizes
+maximizing
+mesmerize
+mesmerized
+mesmerizes
+mesmerizing
+mitigate
+mitigated
+mitigates
+mitigating
+navigate
+navigated
+navigates
+navigating
+nurture
+nurtured
+nurtures
+nurturing
+operationalize
+operationalized
+operationalizes
+operationalizing
+optimize
+optimized
+optimizes
+optimizing
+permeate
+permeated
+permeates
+permeating
+personalize
+personalized
+personalizes
+personalizing
+pioneer
+pioneered
+pioneering
+pioneers
+pivot
+pivoted
+pivoting
+pivots
+prioritize
+prioritized
+prioritizes
+prioritizing
+problematize
+problematized
+problematizes
+problematizing
+propel
+propelled
+propelling
+propels
+redefine
+redefined
+redefines
+redefining
+refine
+refined
+refines
+refining
+reimagine
+reimagined
+reimagines
+reimagining
+reinforce
+reinforced
+reinforces
+reinforcing
+reiterate
+reiterated
+reiterates
+reiterating
+rejuvenate
+rejuvenated
+rejuvenates
+rejuvenating
+reshape
+reshaped
+reshapes
+reshaping
+reskill
+reskilled
+reskilling
+reskills
+resonate
+resonated
+resonates
+resonating
+revitalize
+revitalized
+revitalizes
+revitalizing
+revolutionize
+revolutionized
+revolutionizes
+revolutionizing
+safeguard
+safeguarded
+safeguarding
+safeguards
+showcase
+showcased
+showcases
+showcasing
+solidified
+solidifies
+solidify
+solidifying
+spearhead
+spearheaded
+spearheading
+spearheads
+spotlight
+spotlighted
+spotlighting
+spotlights
+streamline
+streamlined
+streamlines
+streamlining
+strive
+strived
+strives
+striving
+supercharge
+supercharged
+supercharges
+supercharging
+synergize
+synergized
+synergizes
+synergizing
+synthesize
+synthesized
+synthesizes
+synthesizing
+tailor
+tailored
+tailoring
+tailors
+thrive
+thrived
+thrives
+thriving
+transcend
+transcended
+transcending
+transcends
+transform
+transformed
+transforming
+transforms
+traverse
+traversed
+traverses
+traversing
+turbocharge
+turbocharged
+turbocharges
+turbocharging
+underline
+underlined
+underlines
+underlining
+underpin
+underpinned
+underpinning
+underpins
+underscore
+underscored
+underscores
+underscoring
+unearth
+unearthed
+unearthing
+unearths
+unleash
+unleashed
+unleashes
+unleashing
+unlock
+unlocked
+unlocking
+unlocks
+unpack
+unpacked
+unpacking
+unpacks
+unravel
+unraveled
+unraveling
+unravels
+unveil
+unveiled
+unveiling
+unveils
+uphold
+upholded
+upholding
+upholds
+upskill
+upskilled
+upskilling
+upskills
+usher
+ushered
+ushering
+ushers
+utilize
+utilized
+utilizes
+utilizing
+venture
+ventured
+ventures
+venturing
+weave
+weaved
+weaves
+weaving
+
+# ── adjectives (89)
+actionable
+adept
+bespoke
+breathtaking
+burgeoning
+bustling
+cohesive
+commendable
+comprehensive
+crucial
+diverse
+dynamic
+enchanting
+enduring
+enlightening
+esteemed
+evocative
+exceptional
+exemplary
+foundational
+frictionless
+granular
+groundbreaking
+harmonious
+holistic
+illustrious
+immersive
+impactful
+inclusive
+indispensable
+inherent
+innovative
+insightful
+instrumental
+integral
+interconnected
+interwoven
+intricate
+intrinsic
+intuitive
+invaluable
+meaningful
+meticulous
+multifaceted
+myriad
+nascent
+nestled
+notable
+noteworthy
+nuanced
+optimal
+overarching
+palpable
+paramount
+pertinent
+pervasive
+pivotal
+plethora
+poised
+proactive
+profound
+quintessential
+remarkable
+renowned
+resilient
+robust
+salient
+scalable
+seamless
+seminal
+sophisticated
+steadfast
+strategic
+symbiotic
+synergistic
+tangible
+thoughtful
+timeless
+transformative
+ubiquitous
+unparalleled
+unprecedented
+unsung
+unwavering
+vast
+versatile
+vibrant
+vital
+whimsical
+
+# ── adverbs and transitions (49)
+accordingly
+additionally
+alternatively
+arguably
+collectively
+comprehensively
+consequently
+conversely
+crucially
+deeply
+effortlessly
+essentially
+firstly
+fundamentally
+furthermore
+hence
+holistically
+importantly
+increasingly
+indeed
+inevitably
+inherently
+interestingly
+intricately
+intrinsically
+invariably
+lastly
+meticulously
+moreover
+nevertheless
+nonetheless
+notably
+profoundly
+remarkably
+robustly
+seamlessly
+secondly
+significantly
+strategically
+subsequently
+thereby
+thirdly
+thus
+tirelessly
+truly
+ultimately
+undeniably
+undoubtedly
+vibrantly
+
+# ── nouns (96)
+accountability
+acumen
+adaptability
+alignment
+allure
+ambiance
+authenticity
+bandwidth
+beacon
+beacons
+blueprint
+blueprints
+camaraderie
+catalyst
+catalysts
+cornerstone
+cornerstones
+crossroads
+dichotomy
+ecosystem
+ecosystems
+embodiment
+empowerment
+enhancement
+epitome
+essence
+facet
+facets
+facilitation
+finesse
+fortitude
+framework
+frameworks
+frontier
+frontiers
+hallmark
+hallmarks
+harbinger
+horizon
+horizons
+implementation
+inclusivity
+ingenuity
+innovation
+innovations
+insights
+interplay
+intricacies
+journey
+journeys
+juxtaposition
+kaleidoscope
+labyrinth
+landscape
+landscapes
+linchpin
+mindfulness
+mosaic
+multitude
+nuance
+nuances
+odyssey
+optimization
+paradigm
+paradigms
+prowess
+realization
+realm
+realms
+resilience
+resonance
+roadmap
+roadmaps
+spectrum
+stakeholder
+stakeholders
+sustainability
+symphony
+synergies
+synergy
+takeaway
+takeaways
+tapestries
+tapestry
+tenacity
+testament
+testaments
+toolkit
+touchpoint
+touchpoints
+trajectories
+trajectory
+transparency
+underpinnings
+utilization
+wellbeing
+
+# ── phrases (321)
+a broader
+a comprehensive approach
+a comprehensive understanding
+a crucial role
+a deeper
+a deeper understanding
+a delicate balance
+a double edged sword
+a game changer
+a holistic approach
+a host of
+a journey of
+a key role
+a multifaceted approach
+a multitude of
+a must have
+a myriad of
+a nuanced approach
+a nuanced understanding
+a perfect blend
+a pivotal role
+a plethora of
+a powerful
+a proactive approach
+a profound
+a remarkable
+a reminder that
+a rich tapestry
+a richer
+a sense of belonging
+a sense of community
+a sense of purpose
+a significant
+a significant role
+a strategic approach
+a symphony of
+a testament to
+a unique blend
+a variety of
+a vital role
+a wealth of
+a wide array of
+a wide range of
+absolutely here's
+actionable insights
+all in all
+an abundance of
+an array of
+an essential part
+an essential role
+an integral part
+as an ai
+as an ai language model
+as we move forward
+as we navigate
+at its core
+at the end of the day
+at the forefront of
+at the heart of
+awe inspiring
+beacon of
+beacon of hope
+best practices
+breathtaking views
+buckle up
+bustling city
+by embracing
+by fostering
+by harnessing
+by implementing
+by leveraging
+certainly here is
+certainly here's
+challenges and opportunities
+changing landscape
+complex landscape
+comprehensive guide
+continues to evolve
+continuous improvement
+cornerstone of
+crucial aspect
+crucial to understand
+culture of innovation
+cutting edge
+dance between
+data driven
+deep dive
+deep understanding
+delicate dance
+delve into
+delves into
+delving into
+digital landscape
+dive into
+drive innovation
+driving innovation
+due to the fact that
+elevate your
+embark on a journey
+emphasizes the importance
+endless possibilities
+essential aspect
+ever changing
+ever changing world
+ever evolving
+ever evolving landscape
+evolving landscape
+far reaching
+fast paced
+fast paced world
+feel free to
+first and foremost
+forward thinking
+foster a culture
+fostering a sense of
+from a to
+gain insights
+game changer
+game changing
+going forward
+great question
+growth mindset
+happy to help
+harness the power
+having said that
+here is a breakdown
+here's a breakdown
+here's an overview
+hidden gem
+highlights the importance
+holds the key
+hope this helps
+i hope this helps
+i'm happy to help
+important aspect
+important to consider
+important to remember
+important to understand
+in a nutshell
+in an ever changing
+in an increasingly
+in conclusion
+in essence
+in light of
+in other words it
+in summary
+in the digital age
+in the end
+in the face of
+in the grand scheme
+in the realm of
+in the wake of
+in this article
+in this blog post
+in this essay
+in today's digital age
+in today's fast paced world
+in today's world
+interplay between
+intricate dance
+invaluable resource
+it can be argued
+it goes without saying
+it is crucial to
+it is essential to
+it is important to
+it is important to note
+it is no secret
+it is vital to
+it is worth noting
+it should be noted
+it's crucial to
+it's essential to
+it's important to
+it's important to note
+it's no secret
+it's not just
+it's undeniable
+it's vital to
+it's worth noting
+keep in mind that
+key aspects
+key considerations
+key factors
+key takeaways
+last but not least
+lasting impact
+let me know if
+let us explore
+let's break it down
+let's delve
+let's dive in
+let's explore
+let's take a look
+lifelong learning
+limitless potential
+long lasting
+look no further
+looking ahead
+mental well being
+more important than ever
+more than just
+mosaic of
+moving forward
+multifaceted nature
+must have
+must visit
+navigate challenges
+navigate the complexities
+navigate through
+navigating the
+needless to say
+nestled in
+north star
+not just about
+not only does
+not only is
+now more than ever
+offers a unique
+on this journey
+one could argue
+opportunities for growth
+overcome challenges
+paradigm shift
+pave the way
+paves the way
+paving the way
+personal growth
+play a crucial role
+play a key role
+play a pivotal role
+play a vital role
+plays a crucial role
+plays a key role
+plays a pivotal role
+plays a vital role
+positive impact
+powerful tool
+profound impact
+provide valuable
+rapidly evolving
+reach new heights
+remind us that
+reminds us that
+rich cultural heritage
+rich history
+seamless integration
+self care
+serves as a
+serves as a reminder
+serves as a testament
+several key
+shed light on
+shedding light on
+sheds light on
+significant impact
+simply put
+stand the test of time
+stands as a testament
+stands the test of time
+state of the art
+step by step guide
+strike a balance
+striking a balance
+tapestry of
+teaches us that
+that being said
+the beauty of
+the bottom line
+the challenges and opportunities
+the complexities of
+the essence of
+the ever evolving
+the impact of
+the importance of
+the intricate tapestry
+the key to
+the landscape of
+the power of
+the role of
+the significance of
+the world of
+there is no denying
+there's no denying
+this article will
+this essay will
+thought provoking
+to put it simply
+to sum up
+to summarize
+to the next level
+treasure trove
+truly remarkable
+truly special
+truly unique
+ultimate guide
+underscores the importance
+unique challenges
+unleash the potential
+unlock the potential
+unlock the power
+user friendly
+valuable insights
+valuable resource
+valuable tool
+various aspects
+various factors
+vibrant community
+vital aspect
+well being
+well rounded
+when it comes to
+whether it's
+whether you are
+whether you're
+with regard to
+with that said
+without further ado
+work life balance
+worth considering
+worth exploring

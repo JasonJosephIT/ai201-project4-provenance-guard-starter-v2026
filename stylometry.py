@@ -9,7 +9,6 @@ stubs, not implementations: what they compute is yours, and so is how you
 combine them.
 
     sentence_length_spread   do sentences vary in length, or march in step?
-    type_token_ratio         how much of the vocabulary repeats?
     punctuation_density      how much punctuation, and how varied?
 
 Why these might differ between human and AI writing: generated prose tends
@@ -32,6 +31,7 @@ anything together:
 
 import re
 import statistics
+from pathlib import Path
 
 
 def sentences(text: str) -> list[str]:
@@ -76,32 +76,6 @@ def sentence_length_spread(text: str) -> float:
     return round(statistics.stdev(lengths) / mean, 4)
 
 
-def type_token_ratio(text: str) -> float:
-    """
-    Unique words over total words. ← TODO
-
-    Returns:
-        A float between 0 and 1. Higher means more varied vocabulary.
-
-    Worth knowing before you rely on it: this measure falls as text gets
-    longer, because common words repeat. Two texts of different lengths aren't
-    directly comparable on it, and if your test inputs vary a lot in length,
-    that alone can look like a signal.
-    """
-    # Decision: moving-average type-token ratio (MATTR) over 50-word windows,
-    # because plain TTR falls as text gets longer and would make length look
-    # like a signal. Texts under 50 words fall back to plain TTR.
-    # Scale 0–1. HIGHER = MORE HUMAN (more varied vocabulary).
-    w = words(text)
-    if not w:
-        return 0.0
-    window = 50
-    if len(w) <= window:
-        return round(len(set(w)) / len(w), 4)
-    ratios = [len(set(w[i:i + window])) / window for i in range(len(w) - window + 1)]
-    return round(statistics.mean(ratios), 4)
-
-
 def punctuation_density(text: str) -> float:
     """
     How much punctuation, relative to length. ← TODO
@@ -123,6 +97,44 @@ def punctuation_density(text: str) -> float:
     return round(100 * marks / len(w), 4)
 
 
+# Stock AI words and phrases (about 1,000) live in ai_words.txt, one per line.
+# This is NOT a test of vocabulary *variety* — people can have a set word
+# choice too — it only counts these specific words that AI models overuse.
+
+def _load_ai_words() -> list[str]:
+    path = Path(__file__).with_name("ai_words.txt")
+    if not path.exists():
+        return []
+    terms = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            # Normalise exactly the way words() normalises the text.
+            terms.append(" ".join(words(line)))
+    return sorted(set(t for t in terms if t), key=len, reverse=True)
+
+
+AI_WORDS = _load_ai_words()
+# One compiled pattern; longest terms first so a phrase is counted once,
+# not once for the phrase and again for each word inside it.
+_AI_PATTERN = re.compile(r"\b(?:" + "|".join(re.escape(t) for t in AI_WORDS) + r")\b") if AI_WORDS else None
+
+
+def ai_word_rate(text: str) -> float:
+    """
+    Stock AI words and phrases per 100 words.
+
+    Returns:
+        A float, usually 0–10. HIGHER = MORE AI-LIKE (the only measure here
+        that already points the same way as the final score).
+    """
+    w = words(text.replace("\u2019", "'"))
+    if not w or _AI_PATTERN is None:
+        return 0.0
+    hits = len(_AI_PATTERN.findall(" ".join(w)))
+    return round(100 * hits / len(w), 4)
+
+
 # ── Combining them ───────────────────────────────────────────────────────────
 
 def style_signal(text: str) -> float:
@@ -138,7 +150,7 @@ def style_signal(text: str) -> float:
 
       1. Which direction each measure points. Low spread means more AI-ish, so
          it needs flipping. Work out which of your three need that.
-      2. How to get each onto a comparable scale. A raw type-token ratio sits
+      2. How to get each onto a comparable scale. A spread ratio sits roughly
          between 0 and 1; a raw punctuation count doesn't. Adding them
          unscaled means whichever has the bigger numbers wins by default.
 
@@ -153,11 +165,16 @@ def style_signal(text: str) -> float:
     #    anchors read off the calibration texts, then clamped:
     #      spread  CV 0.20 -> 1.0 (AI-even) … CV 0.80 -> 0.0 (lumpy)
     #      punct   0 marks/100 words -> 1.0 … 4 marks/100 words -> 0.0
-    # 3. Weights. spread 0.6, punctuation 0.4, type-token ratio 0.0.
-    #    TTR is computed and printed but NOT used: on the calibration set it
-    #    ran backwards (the AI essay scored 0.90, the human one 0.86), and a
-    #    low TTR would push plain human writing toward "AI" — the exact false
-    #    positive this service must avoid.
+    # 3. Weights. spread 0.5, punctuation 0.3, stock AI words 0.2.
+    #    AI words get the smallest weight on purpose: formal human writers
+    #    use "furthermore" and "crucial" too, so the word list can nudge the
+    #    score but never decide it alone.
+    #      ai words  0 per 100 words -> 0.0 … 3 or more per 100 words -> 1.0
+    #    Vocabulary variety (type-token ratio) was removed on purpose. Word
+    #    choice doesn't separate the two: AI can settle into a set vocabulary,
+    #    but so do people (second-language writers, plain writers, anyone
+    #    with a house style). On the calibration set it also ran backwards
+    #    (AI essay 0.90, human 0.86).
     # Edge case: fewer than 3 sentences gives no trustworthy spread, so that
     # part scores 0.5 ("no evidence") instead of pretending to know.
     def scale(x, ai_end, human_end):
@@ -170,7 +187,9 @@ def style_signal(text: str) -> float:
         spread_ai = 0.5
     punct_ai = scale(punctuation_density(text), 0.0, 4.0)
 
-    score = 0.6 * spread_ai + 0.4 * punct_ai
+    words_ai = min(ai_word_rate(text) / 3.0, 1.0)
+
+    score = 0.5 * spread_ai + 0.3 * punct_ai + 0.2 * words_ai
     return round(min(max(score, 0.0), 1.0), 4)
 
 
@@ -184,6 +203,6 @@ if __name__ == "__main__":
 
     print(f"{len(sentences(text))} sentences, {len(words(text))} words\n")
     print(f"sentence_length_spread   {sentence_length_spread(text)}")
-    print(f"type_token_ratio         {type_token_ratio(text)}")
     print(f"punctuation_density      {punctuation_density(text)}")
+    print(f"ai_word_rate             {ai_word_rate(text)}")
     print(f"style_signal             {style_signal(text)}   (higher = more likely AI)")
