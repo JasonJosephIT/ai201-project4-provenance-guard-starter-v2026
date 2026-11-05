@@ -8,6 +8,7 @@ updated: 2026-11-04
 # Provenance Guard — status
 
 ## Now
+- Unit 8 Milestone 1 done: rate limiting on, flood shows 5×200 then 10×429, README Rate Limiting filled.
 - Unit 7 committed to the fork (5 commits, main at 6730618).
 - Milestones 3–5 built and tested live: `/submit` (both signals, combined score, labels, validation), `/appeal`, `stylometry.py`, `combine_signals`. README sections What This Does, Signals and Scoring, Label Variants and Sample Run are filled.
 
@@ -17,6 +18,7 @@ updated: 2026-11-04
 - Fill `scenarios.py` with inputs for criteria 1–5 (own writing first).
 
 ## Decisions
+- 2026-11-04: Rate limiting on by default: 5/minute, 50/day, keyed per creator_id (IP fallback). Known gap: rotating creator_id bypasses it. Rejection log entries now carry all nine fields (nulls for scores).
 - 2026-11-04: Two Claude entries written with a humanizer skill scored unsure (0.595, 0.423): zero stock AI words, colons read as human punctuation. Accepted as a safe miss; becomes a unit 8 evasion test case.
 - 2026-11-04: Stock AI word list extended to 1,075 entries in `ai_words.txt` (loaded by `stylometry.py`). Risk: a human student essay using taught transitions scored 0.850, near the 0.88 AI line.
 - 2026-11-04: Added a stock-AI-words measure (`stylometry.AI_WORDS`, `ai_word_rate`) at weight 0.2; style = 0.5 spread + 0.3 punctuation + 0.2 AI words. Plain human now 0.761, generic AI 0.910.

@@ -253,7 +253,7 @@ I used Claude Code (Claude Opus 5.5) as a pair programmer throughout. The two mo
 
 ## Rate Limiting
 
-**My limits:** ___ per minute, ___ per day
+**My limits:** 5 per minute, 50 per day
 
 **Why those numbers and not others:**
 <!-- Think about two people: a real writer submitting their own work a few
@@ -261,16 +261,24 @@ I used Claude Code (Claude Opus 5.5) as a pair programmer throughout. The two mo
      thresholds. Your numbers have to be liveable for the first and hostile to
      the second. -->
 
+A real writer checking their own work submits a few times an hour, maybe a burst of three or four while revising. 5 a minute (one every 12 seconds) never gets in their way, and 50 a day is far more than anyone checks their own writing. A script trying to map my thresholds needs hundreds of near-identical variations. At 50 a day, 1,000 variations take 20 days per `creator_id`, and a burst gets cut off after 5. The limit is set to be livable for the writer first and costly for the script second.
+
 **What a caller counts as:** <!-- per address, or per creator_id? They fail
 differently — one script can look like a thousand callers, and one household
 can look like one. -->
+
+Per `creator_id`, falling back to IP address when a request has none (`app.py::rate_limit_key`). This is fair to a household or classroom sharing one IP: each writer gets their own count. The weakness is that `creator_id` isn't verified, so a script that sends a new `creator_id` on every request is never limited. Per-IP limiting would catch that script but would lump a whole classroom together. I chose fairness to real writers and logged the gap for the attack run.
 
 **The run of status codes when I pushed past it:**
 
 <!-- python run_attacks.py --flood 15 -->
 
 ```
+$ python run_attacks.py --flood 15
+200 200 200 200 200 429 429 429 429 429 429 429 429 429 429
 
+10 of 15 were rate limited.
+Wrote results/flood_2026-11-04_2131.md
 ```
 
 ---
