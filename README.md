@@ -235,11 +235,9 @@ $ curl "http://127.0.0.1:5000/log?limit=2"
 
 I used Claude Code (Claude Opus 5.5) as a pair programmer throughout. The two moments below are where its output and my judgment met.
 
-**Moment 1 — the acceptance criteria**
+**Moment 1 — test material**
 
-- *What I asked for:* Five numbered criteria in `criteria.md` covering at least three areas. I told it two had to be mine: what happens at the character limit when a large amount is sent, and what types and languages of input a user can submit.
-- *What came back:* Five criteria: false positives on my own writing, score spread with label coverage, a 20,000-character limit (a 250,000-character body rejected in under 2 seconds), never labelling non-English or non-prose input as AI, and every appeal being recorded.
-- *What I changed:* The two bad-input criteria (3 and 4) exist because I asked for them; the starter's areas didn't cover language at all. Criterion 4 also forced a new error into the contract (`422 unsupported_input`). I left one choice open in the criterion: reject non-English text, or score it but cap it at "unsure".
+I use Claude to produce test material as I created or first initiated the project and as I implemented more testing.
 
 **Moment 2 — the combining rule and the AI threshold**
 
