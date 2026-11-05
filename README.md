@@ -39,6 +39,16 @@
 <!-- The path a submission takes, from arriving to the label a reader sees.
      Six or seven steps — this is the trace you wrote in Milestone 1. -->
 
+![Submission pipeline: route, rate limit, model signal, style signal, combine, label, log and respond](docs/pipeline.png)
+
+1. **Route (`app.py::submit`).** Parses the JSON and rejects bad input before any model runs. Missing, empty or non-string `text`, or a missing `creator_id`, gets a 400. More than 20,000 characters gets a 413. Under 40 characters, or text that isn't English prose, gets a 422. Every rejection is logged.
+2. **Rate limiter (unit 8).** Counts requests per `creator_id`, falling back to IP. Past the limit: 429 plus a `rejected` log entry.
+3. **Signal one (`detector.model_signal`).** GPT-2 reads the first 400 tokens. Low perplexity gives a high `model_score`.
+4. **Signal two (`stylometry.style_signal`).** Sentence-length spread and expressive punctuation give `style_score`.
+5. **Combining rule (`scoring.combine_signals`).** An equal-weight average, except that disagreement between the signals can block an "AI" label.
+6. **Label (`scoring.score_to_label`).** Produces the `guess`, a plain-language sentence, and `confidence = |combined − 0.5| × 2`.
+7. **Log and respond (`audit.log_decision`).** Writes all nine fields plus `confidence` and `truncated`, and returns them with a `content_id` the writer can use to appeal.
+
 
 
 ---
@@ -53,35 +63,51 @@
 
 ### Signal one — the model signal
 
-**What it measures:**
+**What it measures:** How predictable the text is to GPT-2 (perplexity over the first 400 tokens), passed through a logistic curve so that perplexity 45 scores 0.5 and lower perplexity scores higher (more AI-like).
 
-**Why that might differ between human and AI writing:**
+**Why that might differ between human and AI writing:** A language model writes by repeatedly choosing a likely next word, so its output is easy for a model to predict. People make odd word choices, change direction suddenly and add specific details no model would guess.
 
-**What it can't see:**
+**What it can't see:** Who wrote the text. It only sees how ordinary the words are. Plain writing in common words scores as machine-like: my plain human running paragraph scored **0.871**, *higher* than the generic AI essay at **0.853**. It also can't see anything after token 400 (about 300 words), and rare words or typos pull AI text toward "human".
 
 ### Signal two — the style signal
 
-**What it measures:**
+**What it measures:** The shape of the text, without reading it:
+- *Sentence-length spread* (standard deviation ÷ mean of words per sentence; 0.20 or below scores fully AI-like, 0.80 or above fully human-like), weighted 0.6.
+- *Expressive punctuation* (`; : — – ( ) ! ?` and quotation marks per 100 words; 0 scores fully AI-like, 4 or more fully human-like), weighted 0.4.
 
-**Why that might differ between human and AI writing:**
+Type-token ratio is computed but weighted 0. On my calibration set it ran backwards: the AI essay scored 0.90 and the human one 0.86. It would also have pushed plain human writing toward "AI".
 
-**What it can't see:**
+**Why that might differ between human and AI writing:** AI text is even, with mid-length sentence after mid-length sentence, commas and full stops. Human writing is lumpy: "Hours." next to a 40-word sentence, plus dashes and brackets.
+
+**What it can't see:** Meaning. Anything that changes the shape without changing the content moves it: a few dashes, chopped sentences, a pasted quote. My lightly edited AI text scored only **0.306** after I added dashes and short sentences. It also shares signal one's blind spot: plain human writing has even sentences and no expressive punctuation, so it scored **0.823**.
 
 ### The combining rule
 
 <!-- Write the rule in words, then give the numbers. What happens when the two
      signals disagree? -->
 
-**The rule:**
+**The rule:** Average the two signals equally, since neither earned more trust: each was fooled by a different input. Then apply one exception. If the signals are more than 0.30 apart, cap the score just below the AI line. Disagreement can block an accusation but can never cause one, so one signal alone can never label someone's writing AI. The cap only works one way, because a split ending in "human" or "unsure" costs the writer nothing.
 
-**The numbers:**
+**The numbers:** `WEIGHT_MODEL_SIGNAL = 0.5`, `WEIGHT_STYLE_SIGNAL = 0.5`, `DISAGREEMENT_GAP = 0.30`, `HUMAN_THRESHOLD = 0.35`, `AI_THRESHOLD = 0.88` (all in `config.py`).
+
+Calibration (model / style / combined → label):
+
+| Input | model | style | combined | label |
+|---|---|---|---|---|
+| Clearly AI (generic essay) | 0.853 | 0.961 | 0.907 | ai |
+| Clearly human (grandmother's buttons) | 0.260 | 0.000 | 0.130 | human |
+| Plain human (running) | 0.871 | 0.823 | 0.847 | unsure |
+| Formal human (legal opinion style) | 0.714 | 0.807 | 0.760 | unsure |
+| Lightly edited AI | 0.556 | 0.306 | 0.431 | unsure |
+
+I set `AI_THRESHOLD` at 0.88, not 0.65, because of the plain human row. At 0.65, three of my five texts would be labelled AI, and two of those three are human. The cost: AI text only slightly less generic than my sample lands in "unsure". The margin is thin (0.847 against 0.88), and it rests on one sample of each, so criterion 1 tests it against real writing.
 
 **Where it lives:** `scoring.py::combine_signals`
 
 <!-- ⚠️ The grader checks your code against that line. If your rule lives
      somewhere else, say where. -->
 
-**A case where my two signals split, and what my rule does with it:**
+**A case where my two signals split, and what my rule does with it:** The lightly edited AI text scored model 0.556 (leaning AI) but style 0.306 (leaning human), because the added dashes and short sentences fooled the style signal. The gap is 0.25, under the 0.30 cap, so the plain average applies: 0.431, which is "unsure". The rule gets it right for the wrong reason: the style signal was tricked, and the model signal wasn't sure enough to outvote it. If the gap had been over 0.30 and the average over 0.88, the cap would have held it at "unsure" anyway.
 
 
 
@@ -96,11 +122,13 @@
 
 | Label | Score range | The exact text a reader sees |
 |---|---|---|
-| high-confidence human |  |  |
-| unsure |  |  |
-| high-confidence AI |  |  |
+| high-confidence human | 0.00 – 0.35 | This reads like it was written by a person. Our check found the kind of variety (in sentence length, word choice and punctuation) that people's writing usually has. |
+| unsure | 0.35 – 0.88 | We can't tell from the writing alone whether this was written by a person or with help from AI, and that's common: plain, clear writing often looks this way. This is not a finding that you used AI, and no action is taken because of it. If this doesn't match how you wrote it, you can ask a person to review it: send an appeal with your content ID and a few words about how you wrote it. |
+| high-confidence AI | 0.88 – 1.00 | This writing has strong patterns we usually see in AI-generated text. This is an estimate, not proof, and it says nothing about you; people's own writing sometimes looks this way too. If this doesn't match how you wrote it, you can ask a person to review it: send an appeal with your content ID and a few words about how you wrote it. |
 
-**Why I worded the "unsure" one this way:**
+All three were reached through `/submit`: the grandmother text scored 0.130 (human), the running text 0.847 (unsure), and the generic AI essay 0.907 (AI).
+
+**Why I worded the "unsure" one this way:** Most real writers who land here are like my running paragraph: plain, clear writing that both signals misread. So the label says outright that this is common and that plain writing looks this way, which puts the reason on the tool, not on the writer. It says "this is not a finding that you used AI" and "no action is taken", because a reader who hears "we're not sure" about their own work assumes the worst. And it ends with how to ask a person, since an unsure result someone can't act on just leaves them worried.
 <!-- It's the hardest of the three. It has to admit uncertainty without
      sounding like an accusation, because the person reading it may well have
      written every word themselves. -->
@@ -124,11 +152,22 @@
 ```bash
 $ curl -X POST http://127.0.0.1:5000/submit \
   -H "Content-Type: application/json" \
-  -d '{"text": "...", "creator_id": "..."}'
+  -d '{"text": "I started running last spring because my doctor told me my blood pressure was too high. The first week was hard. I could only run for two minutes before I had to walk. My legs hurt and I felt slow. But I kept going three times a week, usually early in the morning before work. After a month I could run for ten minutes without stopping.", "creator_id": "jason"}'
 ```
 
 ```json
-
+{
+  "combined_score": 0.8004,
+  "confidence": 0.6008,
+  "content_id": "653aef72-6cda-40cb-8a00-42d4bfb15167",
+  "creator_id": "jason",
+  "guess": "unsure",
+  "label": "We can't tell from the writing alone whether this was written by a person or with help from AI, and that's common: plain, clear writing often looks this way. This is not a finding that you used AI, and no action is taken because of it. If this doesn't match how you wrote it, you can ask a person to review it: send an appeal with your content ID and a few words about how you wrote it.",
+  "model_score": 0.7949,
+  "status": "decided",
+  "style_score": 0.8058,
+  "truncated": false
+}
 ```
 
 **An appeal**
@@ -136,38 +175,73 @@ $ curl -X POST http://127.0.0.1:5000/submit \
 ```bash
 $ curl -X POST http://127.0.0.1:5000/appeal \
   -H "Content-Type: application/json" \
-  -d '{"content_id": "...", "reasoning": "..."}'
+  -d '{"content_id": "653aef72-6cda-40cb-8a00-42d4bfb15167", "reasoning": "I wrote this myself about my own running. I keep my writing simple on purpose."}'
 ```
 
 ```json
-
+{
+  "appealed_at": "2026-11-05T01:42:35+00:00",
+  "content_id": "653aef72-6cda-40cb-8a00-42d4bfb15167",
+  "message": "Your appeal is recorded. A person will review it. Your original result is marked as under review.",
+  "original_guess": "unsure",
+  "previous_status": "decided",
+  "status": "under_review"
+}
 ```
 
 **What the log shows afterwards**
 
 ```bash
-$ curl "http://127.0.0.1:5000/log?limit=3"
+$ curl "http://127.0.0.1:5000/log?limit=2"
 ```
 
 ```json
-
+{
+  "count": 2,
+  "entries": [
+    {
+      "combined_score": 0.8004,
+      "confidence": 0.6008,
+      "content_id": "653aef72-6cda-40cb-8a00-42d4bfb15167",
+      "creator_id": "jason",
+      "guess": "unsure",
+      "label": "We can't tell from the writing alone whether this was written by a person or with help from AI, and that's common: plain, clear writing often looks this way. This is not a finding that you used AI, and no action is taken because of it. If this doesn't match how you wrote it, you can ask a person to review it: send an appeal with your content ID and a few words about how you wrote it.",
+      "model_score": 0.7949,
+      "status": "decided",
+      "style_score": 0.8058,
+      "text_length": 336,
+      "timestamp": "2026-11-05T01:42:35+00:00",
+      "truncated": false
+    },
+    {
+      "content_id": "653aef72-6cda-40cb-8a00-42d4bfb15167",
+      "creator_id": "jason",
+      "event": "appeal",
+      "reasoning": "I wrote this myself about my own running. I keep my writing simple on purpose.",
+      "status": "under_review",
+      "timestamp": "2026-11-05T01:42:35+00:00"
+    }
+  ]
+}
 ```
 
 ---
 
 ## How I Used AI
 
-**Moment 1**
+I used Claude Code (Claude Opus 5.5) as a pair programmer throughout. The two moments below are where its output and my judgment met.
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+**Moment 1 — the acceptance criteria**
 
-**Moment 2**
+- *What I asked for:* Five numbered criteria in `criteria.md` covering at least three areas. I told it two had to be mine: what happens at the character limit when a large amount is sent, and what types and languages of input a user can submit.
+- *What came back:* Five criteria: false positives on my own writing, score spread with label coverage, a 20,000-character limit (a 250,000-character body rejected in under 2 seconds), never labelling non-English or non-prose input as AI, and every appeal being recorded.
+- *What I changed:* The two bad-input criteria (3 and 4) exist because I asked for them; the starter's areas didn't cover language at all. Criterion 4 also forced a new error into the contract (`422 unsupported_input`). I left one choice open in the criterion: reject non-English text, or score it but cap it at "unsure".
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+**Moment 2 — the combining rule and the AI threshold**
+
+- *What came back first:* The Milestone 1 design proposed `AI_THRESHOLD = 0.75`, plus a rule that both signals must be at least 0.6 before anything is labelled AI.
+- *What the numbers showed:* When the five calibration texts ran through both signals, my plain human running paragraph scored 0.847 combined. That's above 0.75, so the proposed design would have accused it, even though both signals were wrong together. Vocabulary variety (type-token ratio) also ran backwards: the AI essay scored 0.90 and the human one 0.86.
+- *What I changed:* The threshold went to 0.88, and the "both ≥ 0.6" rule was replaced with a one-way disagreement cap (a gap over 0.30 can block an AI label but never cause one). Type-token ratio is weighted 0. The formal-human and edited-AI calibration texts were written by the AI, not by me, so criterion 1 is tested on my own writing in `scenarios.py`, not on these.
 
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
