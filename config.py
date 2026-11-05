@@ -99,8 +99,14 @@ AI_THRESHOLD = 0.88
 # an hour, and a script sending a thousand variations to map your thresholds.
 # Your README has to say why your numbers and not others.
 
-RATE_LIMITING_ENABLED = os.getenv("AI201_RATE_LIMITS", "0") == "1"
+# On by default from unit 8. AI201_RATE_LIMITS=0 still turns it off for local experiments.
+RATE_LIMITING_ENABLED = os.getenv("AI201_RATE_LIMITS", "1") == "1"
 
+# Counted per creator_id (falls back to IP address when there is none).
+# 5/minute: a writer revising and resubmitting never needs more than one
+#   every 12 seconds, so a real person won't hit it.
+# 50/day: far more than anyone checks their own work, but a script sending
+#   1,000 variations to map the thresholds needs 20 days per creator_id.
 RATE_LIMIT_PER_MINUTE = 5
 RATE_LIMIT_PER_DAY = 50
 
