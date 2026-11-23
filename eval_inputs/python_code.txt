@@ -1,0 +1,17 @@
+def load_entries(path):
+    entries = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            entries.append(json.loads(line))
+    return entries
+
+
+def count_by_status(entries):
+    counts = {}
+    for entry in entries:
+        status = entry.get("status", "unknown")
+        counts[status] = counts.get(status, 0) + 1
+    return counts

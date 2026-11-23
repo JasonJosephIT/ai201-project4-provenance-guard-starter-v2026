@@ -25,6 +25,8 @@ import argparse
 import datetime as dt
 import json
 import sys
+import time
+import uuid
 from pathlib import Path
 
 import config
@@ -112,15 +114,26 @@ def main():
 
         trials = []
         for trial in range(1, args.trials + 1):
+            if scenario.get("appeals"):
+                results = run_appeals(requests, args, scenario, trial)
+                trials.append(results)
+                print(f"  trial {trial}: " + ", ".join(str(r.get("status")) for r in results))
+                continue
             results = []
             for i, body in enumerate(bodies_for(scenario), 1):
                 preview = describe(body)
                 try:
+                    started = time.perf_counter()
                     response = requests.post(f"{args.url}/submit", json=body,
                                              timeout=args.timeout)
+                    elapsed = round(time.perf_counter() - started, 3)
                     payload = response.json() if response.content else {}
                     results.append({
                         "status": response.status_code,
+                        "error": payload.get("error"),
+                        "seconds": elapsed,
+                        "combined_score": payload.get("combined_score"),
+                        "truncated": payload.get("truncated"),
                         "guess": payload.get("guess"),
                         "confidence": payload.get("confidence"),
                         "model_score": payload.get("model_score"),
@@ -139,6 +152,48 @@ def main():
         rows.append({"scenario": scenario, "trials": trials})
 
     write_report(rows, args)
+
+
+def run_appeals(requests, args, scenario, trial):
+    """
+    Criterion 5: submit each text, appeal it, and confirm the audit log holds
+    the original `decided` entry plus the appeal. Then send three bad appeals
+    and confirm none of them adds an appeal entry.
+    """
+    def log_for(content_id):
+        entries = requests.get(f"{args.url}/log", timeout=args.timeout).json()["entries"]
+        return [e for e in entries if e.get("content_id") == content_id]
+
+    results, content_ids = [], []
+    for i, text in enumerate(scenario["appeals"], 1):
+        sub = requests.post(f"{args.url}/submit", timeout=args.timeout,
+                            json={"text": text, "creator_id": f"eval_appeal_t{trial}_{i}"})
+        content_id = sub.json().get("content_id")
+        content_ids.append(content_id)
+        app = requests.post(f"{args.url}/appeal", timeout=args.timeout,
+                            json={"content_id": content_id,
+                                  "reasoning": "I wrote this myself in one sitting."})
+        payload = app.json()
+        events = [e.get("status") if e.get("event") != "appeal" else "appeal"
+                  for e in log_for(content_id)]
+        results.append({"case": f"appeal {i}", "submit_status": sub.status_code,
+                        "status": app.status_code, "returned_status": payload.get("status"),
+                        "log_events": events, "sent": text[:60]})
+
+    bad = [
+        ("unknown content_id", {"content_id": str(uuid.uuid4()), "reasoning": "mine"}),
+        ("missing reasoning", {"content_id": content_ids[0]}),
+        ("second appeal", {"content_id": content_ids[0], "reasoning": "again"}),
+    ]
+    for case, body in bad:
+        before = requests.get(f"{args.url}/log", timeout=args.timeout).json()["entries"]
+        app = requests.post(f"{args.url}/appeal", json=body, timeout=args.timeout)
+        after = requests.get(f"{args.url}/log", timeout=args.timeout).json()["entries"]
+        new_appeals = [e for e in after[len(before):] if e.get("event") == "appeal"]
+        results.append({"case": case, "status": app.status_code,
+                        "error": app.json().get("error"),
+                        "new_appeal_entries": len(new_appeals), "sent": json.dumps(body)[:80]})
+    return results
 
 
 def write_report(rows, args):

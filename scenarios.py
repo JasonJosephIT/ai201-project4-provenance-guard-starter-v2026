@@ -22,49 +22,97 @@ A scenario carries **either** of these:
               because you cannot express "the field is missing" as a string.
 """
 
+from pathlib import Path
+
+INPUTS = Path(__file__).parent / "eval_inputs"
+
+
+def _read(name):
+    return (INPUTS / name).read_text(encoding="utf-8").strip()
+
+
+def _own_writing():
+    """
+    Criterion 1: my own writing, one .txt file per piece in eval_inputs/own/.
+    Files named plain_*.txt are the deliberately plain pieces (short
+    sentences, common words) that criterion 1 singles out.
+    """
+    folder = INPUTS / "own"
+    files = sorted(folder.glob("*.txt")) if folder.exists() else []
+    return [f.read_text(encoding="utf-8").strip() for f in files]
+
+
+# 19,999 characters of real prose: the three human passages repeated, cut to size.
+_LONG_PROSE = " ".join([_read("human_jerome.txt"), _read("human_bird.txt"),
+                        _read("human_twain.txt")] * 10)[:19_999]
+
 SCENARIOS = [
     {
         "name": "my own writing",
         "criterion": 1,
-        # ⚠️ PUT YOUR OWN WRITING HERE. Not AI text, not a sample from the web —
-        # things you actually wrote. This is the criterion that matters most and
-        # it's meaningless with someone else's prose.
-        "texts": [
-            "REPLACE ME with a paragraph you wrote yourself.",
-            "REPLACE ME with another one. Ten pieces is the usual number.",
-        ],
+        # Order follows sorted filenames in eval_inputs/own/ (plain_* sort last).
+        "texts": _own_writing(),
     },
-    {
-        "name": "label coverage",
-        "criterion": 2,
-        # Inputs spread across your score range, so you can check all three
-        # labels are actually reachable.
-        "texts": [
-            "REPLACE ME with something you're confident is AI-generated.",
-            "REPLACE ME with something you're confident is human-written.",
-            "REPLACE ME with something genuinely borderline.",
-        ],
-    },
-    # A bad-input criterion looks like this. Uncomment and adjust if that's one
-    # of your five — these are raw request bodies, sent exactly as written.
-    #
-    # {
-    #     "name": "bad input",
-    #     "criterion": 3,
-    #     "bodies": [
-    #         {"text": "", "creator_id": "eval_bad_empty"},
-    #         {"creator_id": "eval_bad_missing"},          # no text field at all
-    #         {"text": "word " * 50000, "creator_id": "eval_bad_huge"},
-    #         {"text": None, "creator_id": "eval_bad_null"},
-    #     ],
-    # },
 
-    # TODO: add what your remaining criteria need.
-    #
-    # A criterion about the appeal path can't be tested by sending text alone;
-    # it needs a submission first and then an appeal against the content_id
-    # that came back. You'll need to test that one by hand, or extend this file
-    # and run_eval.py to do it. Saying which you did is part of the write-up.
+    {
+        "name": "spread and label coverage",
+        "criterion": 2,
+        # 1-3 confidently AI (written by an assistant, stock phrasing),
+        # 4-6 confidently human (Project Gutenberg: Jerome 1889, Bird 1879,
+        # Twain 1883), 7-9 borderline (AI drafts I lightly edited by hand).
+        "texts": [
+            _read("ai_remote_work.txt"),
+            _read("ai_climate.txt"),
+            _read("ai_reading.txt"),
+            _read("human_jerome.txt"),
+            _read("human_bird.txt"),
+            _read("human_twain.txt"),
+            _read("borderline_coffee.txt"),
+            _read("borderline_exercise.txt"),
+            _read("borderline_phones.txt"),
+        ],
+    },
+
+    {
+        "name": "large submissions",
+        "criterion": 3,
+        "bodies": [
+            {"text": _LONG_PROSE, "creator_id": "eval_c3_19999"},
+            {"text": "a" * 20_001, "creator_id": "eval_c3_20001"},
+            {"text": "word " * 50000, "creator_id": "eval_c3_250k"},
+            {"text": _read("essay_300.txt"), "creator_id": "eval_c3_essay"},
+        ],
+    },
+
+    {
+        "name": "not english prose",
+        "criterion": 4,
+        "bodies": [
+            {"text": 42, "creator_id": "eval_c4_number"},
+            {"text": None, "creator_id": "eval_c4_null"},
+            {"text": ["a", "list"], "creator_id": "eval_c4_list"},
+            {"text": {"an": "object"}, "creator_id": "eval_c4_object"},
+            {"text": _read("es_paragraph.txt"), "creator_id": "eval_c4_spanish"},
+            {"text": _read("zh_paragraph.txt"), "creator_id": "eval_c4_chinese"},
+            {"text": _read("ar_paragraph.txt"), "creator_id": "eval_c4_arabic"},
+            {"text": _read("python_code.txt"), "creator_id": "eval_c4_code"},
+            {"text": _read("url_list.txt"), "creator_id": "eval_c4_urls"},
+            {"text": _read("emoji_only.txt"), "creator_id": "eval_c4_emoji"},
+        ],
+    },
+
+    {
+        "name": "appeal path",
+        "criterion": 5,
+        # run_eval.py submits these 10, appeals each one, then sends the
+        # three bad appeals (unknown id, missing reasoning, second appeal)
+        # and checks the audit log for each.
+        "appeals": [_read(n) for n in (
+            "ai_remote_work.txt", "ai_climate.txt", "ai_reading.txt",
+            "human_jerome.txt", "human_bird.txt", "human_twain.txt",
+            "borderline_coffee.txt", "borderline_exercise.txt",
+            "borderline_phones.txt", "essay_300.txt")],
+    },
 ]
 
 
@@ -80,6 +128,9 @@ def validate() -> list[str]:
     for i, scenario in enumerate(SCENARIOS, 1):
         if not scenario.get("name"):
             problems.append(f"scenario {i} has no name")
+
+        if scenario.get("appeals"):
+            continue
 
         texts = scenario.get("texts")
         bodies = scenario.get("bodies")

@@ -1,0 +1,1 @@
+They will need to visit the following link: https://aka.ms/mfasetup. Once they visit this link, they will need to sign in with the above credentials and install the Microsoft Authenticator app on their phone. After signing in and installing the app, they will just need to follow the prompts that pop up on the computer. Please let me know if they’re able to sign in successfully.

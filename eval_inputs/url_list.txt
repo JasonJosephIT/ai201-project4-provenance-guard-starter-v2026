@@ -1,0 +1,6 @@
+https://www.example.com/articles/how-to-train-your-dog
+https://docs.python.org/3/library/json.html
+https://github.com/pallets/flask/blob/main/README.md
+https://en.wikipedia.org/wiki/Stylometry
+https://news.ycombinator.com/item?id=12345678
+https://www.bbc.co.uk/news/technology
