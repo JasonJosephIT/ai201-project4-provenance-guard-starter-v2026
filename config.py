@@ -75,7 +75,7 @@ DISAGREEMENT_GAP = 0.30
 # getting through. There is no setting that avoids the trade — only settings
 # that decide who pays for it.
 
-HUMAN_THRESHOLD = 0.35
+HUMAN_THRESHOLD = 0.38  # unit 8 fix: was 0.35; criterion 2 miss (clear human text at 0.369 never labelled human)
 # Set 2026-11-04 from calibration: plain human writing scored 0.847 combined
 # and generic AI 0.907. 0.88 keeps plain human writing out of "ai", at the cost
 # of AI text that is only slightly less generic landing in "unsure".
@@ -91,6 +91,7 @@ AI_THRESHOLD = 0.88
 # thresholds: a style signal that actually varies. `scoring.label_ranges()`
 # prints the bands; the reachable range is a different question.
 
+1121
 
 # ─── Rate limiting (UNIT 8) ──────────────────────────────────────────────────
 # Off in unit 7. You turn it on and choose the numbers in unit 8, Milestone 1.
